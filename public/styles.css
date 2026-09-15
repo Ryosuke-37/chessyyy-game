@@ -32,12 +32,28 @@ h1 {
   letter-spacing: -0.02em;
 }
 
+#mode-select {
+  display: flex;
+  gap: 0.75rem;
+}
+
 #status-bar {
   display: flex;
   align-items: center;
   gap: 1rem;
   font-size: 1rem;
   min-height: 1.5rem;
+}
+
+#game:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+#board.thinking {
+  opacity: 0.7;
 }
 
 #status-text {
@@ -62,6 +78,15 @@ button {
 
 button:hover {
   border-color: var(--amber-gold);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button:disabled:hover {
+  border-color: rgba(44, 52, 64, 0.15);
 }
 
 #board {
