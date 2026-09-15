@@ -70,13 +70,14 @@ h1 {
   gap: 1rem;
   font-size: 1rem;
   min-height: 1.5rem;
+  margin-bottom: 0.75rem;
 }
 
 #game:not([hidden]) {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1.5rem;
+  gap: 0.5rem;
 }
 
 #board.thinking {
@@ -89,6 +90,24 @@ h1 {
 
 #status-text.check {
   color: var(--check-tint);
+}
+
+#material-lead {
+  font-weight: 600;
+  color: var(--amber-gold);
+}
+
+.captured-row {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 1.5rem;
+  width: min(88vw, 512px);
+}
+
+.captured-row .piece {
+  width: 1.4rem;
+  height: 1.4rem;
 }
 
 button {
