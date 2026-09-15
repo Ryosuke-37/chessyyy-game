@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { createInitialState, perft } from "../src/rules.js";
+import { createInitialState, perft } from "../public/rules.js";
 
 test("perft depth 1 from the starting position is 20", () => {
   assert.equal(perft(createInitialState(), 1), 20);
