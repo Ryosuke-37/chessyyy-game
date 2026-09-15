@@ -101,15 +101,28 @@ function addSlideMoves(state, from, rank, file, dirs, moves) {
   }
 }
 
+const PROMOTION_PIECES = ["q", "r", "b", "n"];
+
+function pushPawnAdvance(from, to, piece, captured, flag, promoRank, rank, moves) {
+  if (rank === promoRank) {
+    for (const promotion of PROMOTION_PIECES) {
+      moves.push({ from, to, piece, captured, promotion, flag: "promo" });
+    }
+  } else {
+    moves.push({ from, to, piece, captured, promotion: null, flag });
+  }
+}
+
 function addPawnMoves(state, from, rank, file, moves) {
   const piece = state.board[from];
   const color = colorOf(piece);
   const dir = color === WHITE ? 1 : -1;
   const startRank = color === WHITE ? 1 : 6;
+  const promoRank = color === WHITE ? 7 : 0;
   const oneRank = rank + dir;
 
   if (onBoard(oneRank, file) && !state.board[squareOf(oneRank, file)]) {
-    moves.push({ from, to: squareOf(oneRank, file), piece, captured: null, promotion: null, flag: null });
+    pushPawnAdvance(from, squareOf(oneRank, file), piece, null, null, promoRank, oneRank, moves);
     if (rank === startRank) {
       const twoRank = rank + 2 * dir;
       if (!state.board[squareOf(twoRank, file)]) {
@@ -124,7 +137,61 @@ function addPawnMoves(state, from, rank, file, moves) {
     const to = squareOf(oneRank, f);
     const target = state.board[to];
     if (target && colorOf(target) !== color) {
-      moves.push({ from, to, piece, captured: target, promotion: null, flag: null });
+      pushPawnAdvance(from, to, piece, target, null, promoRank, oneRank, moves);
+    } else if (!target && state.enPassant === to) {
+      const capturedSquare = squareOf(rank, f);
+      moves.push({
+        from,
+        to,
+        piece,
+        captured: state.board[capturedSquare],
+        promotion: null,
+        flag: "ep",
+        epCapturedSquare: capturedSquare,
+      });
+    }
+  }
+}
+
+const CASTLE_ROOK_HOME = { 0: "wq", 7: "wk", 56: "bq", 63: "bk" };
+
+function addCastleMoves(state, from, moves) {
+  const piece = state.board[from];
+  const color = colorOf(piece);
+  const rank = color === WHITE ? 0 : 7;
+  if (from !== squareOf(rank, 4)) return;
+  const opponent = color === WHITE ? BLACK : WHITE;
+  const rookPiece = color === WHITE ? "R" : "r";
+
+  if (state.castling[color === WHITE ? "wk" : "bk"]) {
+    const pass1 = squareOf(rank, 5);
+    const pass2 = squareOf(rank, 6);
+    if (
+      !state.board[pass1] &&
+      !state.board[pass2] &&
+      state.board[squareOf(rank, 7)] === rookPiece &&
+      !isSquareAttacked(state, from, opponent) &&
+      !isSquareAttacked(state, pass1, opponent) &&
+      !isSquareAttacked(state, pass2, opponent)
+    ) {
+      moves.push({ from, to: pass2, piece, captured: null, promotion: null, flag: "castleK" });
+    }
+  }
+
+  if (state.castling[color === WHITE ? "wq" : "bq"]) {
+    const pass1 = squareOf(rank, 3);
+    const pass2 = squareOf(rank, 2);
+    const pass3 = squareOf(rank, 1);
+    if (
+      !state.board[pass1] &&
+      !state.board[pass2] &&
+      !state.board[pass3] &&
+      state.board[squareOf(rank, 0)] === rookPiece &&
+      !isSquareAttacked(state, from, opponent) &&
+      !isSquareAttacked(state, pass1, opponent) &&
+      !isSquareAttacked(state, pass2, opponent)
+    ) {
+      moves.push({ from, to: pass2, piece, captured: null, promotion: null, flag: "castleQ" });
     }
   }
 }
@@ -144,6 +211,7 @@ export function generatePseudoMoves(state) {
       addStepMoves(state, square, rank, file, KNIGHT_DELTAS, moves);
     } else if (type === "k") {
       addStepMoves(state, square, rank, file, KING_DELTAS, moves);
+      addCastleMoves(state, square, moves);
     } else if (type === "b") {
       addSlideMoves(state, square, rank, file, BISHOP_DIRS, moves);
     } else if (type === "r") {
@@ -162,12 +230,39 @@ export function applyMove(state, move) {
   const color = colorOf(piece);
 
   next.enPassant = null;
+
+  if (move.flag === "ep") {
+    board[move.epCapturedSquare] = null;
+  }
+
   board[move.from] = null;
-  board[move.to] = piece;
+  board[move.to] = move.promotion ? (color === WHITE ? move.promotion.toUpperCase() : move.promotion) : piece;
+
+  if (move.flag === "castleK") {
+    const rank = rankOf(move.from);
+    board[squareOf(rank, 7)] = null;
+    board[squareOf(rank, 5)] = color === WHITE ? "R" : "r";
+  } else if (move.flag === "castleQ") {
+    const rank = rankOf(move.from);
+    board[squareOf(rank, 0)] = null;
+    board[squareOf(rank, 3)] = color === WHITE ? "R" : "r";
+  }
 
   if (move.flag === "double") {
     next.enPassant = (move.from + move.to) / 2;
   }
+
+  if (piece.toLowerCase() === "k") {
+    if (color === WHITE) {
+      next.castling.wk = false;
+      next.castling.wq = false;
+    } else {
+      next.castling.bk = false;
+      next.castling.bq = false;
+    }
+  }
+  if (CASTLE_ROOK_HOME[move.from]) next.castling[CASTLE_ROOK_HOME[move.from]] = false;
+  if (CASTLE_ROOK_HOME[move.to]) next.castling[CASTLE_ROOK_HOME[move.to]] = false;
 
   next.turn = color === WHITE ? BLACK : WHITE;
   return next;
