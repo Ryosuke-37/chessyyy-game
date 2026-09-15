@@ -350,3 +350,14 @@ export function generateLegalMoves(state) {
   }
   return legal;
 }
+
+export function getStatus(state) {
+  const legalMoves = generateLegalMoves(state);
+  const inCheck = isKingInCheck(state, state.turn);
+  return {
+    inCheck,
+    isCheckmate: inCheck && legalMoves.length === 0,
+    isStalemate: !inCheck && legalMoves.length === 0,
+    legalMoves,
+  };
+}
