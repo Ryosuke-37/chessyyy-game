@@ -1,4 +1,4 @@
-import { createInitialState } from "../public/rules.js";
+import { createInitialState, generateLegalMoves, applyMove, getStatus, WHITE, BLACK } from "../public/rules.js";
 
 // Durable Object: one instance per online room, obtained via
 // env.ROOM.getByName(roomCode). SQLite-backed (new_sqlite_classes in
@@ -68,6 +68,10 @@ export class Room {
 
     if (message.type === "join") {
       await this.handleJoin(ws, message.payload);
+    } else if (message.type === "move") {
+      await this.handleMove(ws, message.payload);
+    } else if (message.type === "newGame") {
+      await this.handleNewGame(ws);
     }
   }
 
@@ -79,6 +83,51 @@ export class Room {
     ws.serializeAttachment({ clientId, role });
 
     const gameState = await this.getGameState();
-    ws.send(JSON.stringify({ type: "joined", payload: { role, state: gameState } }));
+    ws.send(JSON.stringify({ type: "joined", payload: { role, state: gameState, status: getStatus(gameState) } }));
+  }
+
+  async handleMove(ws, payload) {
+    const attachment = ws.deserializeAttachment();
+    if (!attachment || (attachment.role !== "white" && attachment.role !== "black")) {
+      ws.send(JSON.stringify({ type: "error", payload: { message: "Spectators cannot move" } }));
+      return;
+    }
+
+    const gameState = await this.getGameState();
+    const seatColor = attachment.role === "white" ? WHITE : BLACK;
+    if (gameState.turn !== seatColor) {
+      ws.send(JSON.stringify({ type: "error", payload: { message: "Not your turn" } }));
+      return;
+    }
+
+    const promotion = payload?.promotion ?? null;
+    const move = generateLegalMoves(gameState).find(
+      (candidate) =>
+        candidate.from === payload?.from && candidate.to === payload?.to && candidate.promotion === promotion,
+    );
+    if (!move) {
+      ws.send(JSON.stringify({ type: "error", payload: { message: "Illegal move" } }));
+      return;
+    }
+
+    const nextState = applyMove(gameState, move);
+    await this.ctx.storage.put("gameState", nextState);
+    this.broadcastState(nextState);
+  }
+
+  async handleNewGame(ws) {
+    const attachment = ws.deserializeAttachment();
+    if (!attachment || (attachment.role !== "white" && attachment.role !== "black")) return;
+
+    const freshState = createInitialState();
+    await this.ctx.storage.put("gameState", freshState);
+    this.broadcastState(freshState);
+  }
+
+  broadcastState(gameState) {
+    const message = JSON.stringify({ type: "state", payload: { state: gameState, status: getStatus(gameState) } });
+    for (const ws of this.ctx.getWebSockets()) {
+      ws.send(message);
+    }
   }
 }
