@@ -18,7 +18,14 @@
     <div id="mode-select">
       <button id="mode-hotseat" type="button">Hot-Seat</button>
       <button id="mode-vs-computer" type="button">Vs Computer</button>
-      <button id="mode-online" type="button" disabled>Online (coming soon)</button>
+      <button id="mode-online" type="button">Online</button>
+    </div>
+
+    <div id="online-join" hidden>
+      <label for="room-code-input">Room code</label>
+      <input id="room-code-input" type="text" maxlength="12" placeholder="e.g. TIGER42" autocomplete="off" />
+      <button id="join-room-button" type="button">Join / create</button>
+      <button id="online-back-button" type="button">Back</button>
     </div>
 
     <div id="game" hidden>

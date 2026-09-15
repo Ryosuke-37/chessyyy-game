@@ -37,6 +37,33 @@ h1 {
   gap: 0.75rem;
 }
 
+#online-join:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--light-square);
+  border-radius: 10px;
+  padding: 1.5rem;
+}
+
+#online-join label {
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+#online-join input {
+  font-family: inherit;
+  font-size: 1rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid rgba(44, 52, 64, 0.25);
+  border-radius: 6px;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+
 #status-bar {
   display: flex;
   align-items: center;
