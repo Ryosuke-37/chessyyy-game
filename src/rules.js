@@ -172,3 +172,86 @@ export function applyMove(state, move) {
   next.turn = color === WHITE ? BLACK : WHITE;
   return next;
 }
+
+export function isSquareAttacked(state, square, byColor) {
+  const { board } = state;
+  const rank = rankOf(square);
+  const file = fileOf(square);
+
+  const pawnFromRank = byColor === WHITE ? rank - 1 : rank + 1;
+  const pawnPiece = byColor === WHITE ? "P" : "p";
+  for (const df of [-1, 1]) {
+    const f = file + df;
+    if (onBoard(pawnFromRank, f) && board[squareOf(pawnFromRank, f)] === pawnPiece) {
+      return true;
+    }
+  }
+
+  for (const [dr, df] of KNIGHT_DELTAS) {
+    const r = rank + dr;
+    const f = file + df;
+    if (!onBoard(r, f)) continue;
+    const p = board[squareOf(r, f)];
+    if (p && p.toLowerCase() === "n" && colorOf(p) === byColor) return true;
+  }
+
+  for (const [dr, df] of KING_DELTAS) {
+    const r = rank + dr;
+    const f = file + df;
+    if (!onBoard(r, f)) continue;
+    const p = board[squareOf(r, f)];
+    if (p && p.toLowerCase() === "k" && colorOf(p) === byColor) return true;
+  }
+
+  for (const [dr, df] of BISHOP_DIRS) {
+    let r = rank + dr;
+    let f = file + df;
+    while (onBoard(r, f)) {
+      const p = board[squareOf(r, f)];
+      if (p) {
+        if (colorOf(p) === byColor && (p.toLowerCase() === "b" || p.toLowerCase() === "q")) return true;
+        break;
+      }
+      r += dr;
+      f += df;
+    }
+  }
+
+  for (const [dr, df] of ROOK_DIRS) {
+    let r = rank + dr;
+    let f = file + df;
+    while (onBoard(r, f)) {
+      const p = board[squareOf(r, f)];
+      if (p) {
+        if (colorOf(p) === byColor && (p.toLowerCase() === "r" || p.toLowerCase() === "q")) return true;
+        break;
+      }
+      r += dr;
+      f += df;
+    }
+  }
+
+  return false;
+}
+
+function findKing(state, color) {
+  return state.board.indexOf(color === WHITE ? "K" : "k");
+}
+
+export function isKingInCheck(state, color) {
+  const kingSquare = findKing(state, color);
+  const opponent = color === WHITE ? BLACK : WHITE;
+  return isSquareAttacked(state, kingSquare, opponent);
+}
+
+export function generateLegalMoves(state) {
+  const color = state.turn;
+  const legal = [];
+  for (const move of generatePseudoMoves(state)) {
+    const next = applyMove(state, move);
+    if (!isKingInCheck(next, color)) {
+      legal.push(move);
+    }
+  }
+  return legal;
+}
