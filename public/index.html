@@ -14,11 +14,21 @@
   </head>
   <body>
     <h1>Chessyyy</h1>
-    <div id="status-bar">
-      <span id="status-text"></span>
-      <button id="new-game-button" type="button">New game</button>
+
+    <div id="mode-select">
+      <button id="mode-hotseat" type="button">Hot-Seat</button>
+      <button id="mode-vs-computer" type="button">Vs Computer</button>
+      <button id="mode-online" type="button" disabled>Online (coming soon)</button>
     </div>
-    <div id="board" role="grid" aria-label="Chess board"></div>
+
+    <div id="game" hidden>
+      <div id="status-bar">
+        <span id="status-text"></span>
+        <button id="new-game-button" type="button">New game</button>
+        <button id="menu-button" type="button">Menu</button>
+      </div>
+      <div id="board" role="grid" aria-label="Chess board"></div>
+    </div>
 
     <div id="promotion-modal">
       <div class="panel">
@@ -27,6 +37,6 @@
       </div>
     </div>
 
-    <script type="module" src="/board.js"></script>
+    <script type="module" src="/main.js"></script>
   </body>
 </html>

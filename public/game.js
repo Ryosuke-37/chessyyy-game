@@ -1,4 +1,5 @@
 import { createInitialState, generateLegalMoves, applyMove, colorOf, getStatus, WHITE } from "./rules.js";
+import { findBestMove } from "./ai.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -82,6 +83,9 @@ const promotionChoicesEl = promotionModalEl.querySelector(".choices");
 let state = createInitialState();
 let selected = null;
 let status = getStatus(state);
+// null = both sides are human (Hot-Seat). WHITE or BLACK = the human's
+// color; the other side is played automatically by ai.js (Vs Computer).
+let humanColor = null;
 
 function isDarkSquare(square) {
   const rank = Math.floor(square / 8);
@@ -113,6 +117,24 @@ function afterStateChange() {
   selected = null;
   updateStatusText();
   render();
+  maybeTriggerComputerMove();
+}
+
+function maybeTriggerComputerMove() {
+  if (humanColor === null) return; // Hot-Seat: both sides are human
+  if (status.isCheckmate || status.isStalemate) return;
+  if (state.turn === humanColor) return; // waiting on the human
+
+  statusTextEl.textContent = "Computer is thinking…";
+  boardEl.classList.add("thinking");
+  // Yield to the event loop first so the browser actually paints the
+  // "thinking" status before the (synchronous) search runs.
+  setTimeout(() => {
+    const move = findBestMove(state, 2);
+    state = applyMove(state, move);
+    boardEl.classList.remove("thinking");
+    afterStateChange();
+  }, 50);
 }
 
 function openPromotionPicker(moves) {
@@ -192,6 +214,7 @@ function render() {
 
 function handleSquareClick(square) {
   if (status.isCheckmate || status.isStalemate) return;
+  if (humanColor !== null && state.turn !== humanColor) return; // computer's turn
 
   const piece = state.board[square];
   const isOwnPiece = piece !== null && colorOf(piece) === state.turn;
@@ -238,14 +261,19 @@ boardEl.addEventListener("click", (event) => {
   handleSquareClick(Number(button.dataset.square));
 });
 
-newGameButtonEl.addEventListener("click", () => {
+function resetGame() {
   // Hiding the modal (rather than just resolving it) stops its buttons
   // from being clickable, so a stale promotion choice from the previous
   // game can never be applied to the fresh position.
   promotionModalEl.classList.remove("open");
+  boardEl.classList.remove("thinking");
   state = createInitialState();
   afterStateChange();
-});
+}
 
-updateStatusText();
-render();
+newGameButtonEl.addEventListener("click", resetGame);
+
+export function startGame(newHumanColor) {
+  humanColor = newHumanColor;
+  resetGame();
+}
