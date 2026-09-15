@@ -1,4 +1,4 @@
-import { createInitialState } from "./rules.js";
+import { createInitialState, generateLegalMoves, applyMove, colorOf } from "./rules.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -76,6 +76,7 @@ function pieceLabel(piece) {
 const boardEl = document.getElementById("board");
 
 let state = createInitialState();
+let selected = null;
 
 function isDarkSquare(square) {
   const rank = Math.floor(square / 8);
@@ -83,7 +84,24 @@ function isDarkSquare(square) {
   return (rank + file) % 2 === 0;
 }
 
+function addCornerMarkers(button) {
+  for (const corner of ["tl", "tr", "bl", "br"]) {
+    const marker = document.createElement("span");
+    marker.className = `corner corner-${corner}`;
+    button.appendChild(marker);
+  }
+}
+
 function render() {
+  const legalDestinations = new Map();
+  if (selected !== null) {
+    for (const move of generateLegalMoves(state)) {
+      if (move.from === selected && !legalDestinations.has(move.to)) {
+        legalDestinations.set(move.to, move);
+      }
+    }
+  }
+
   boardEl.innerHTML = "";
   for (let rank = 7; rank >= 0; rank--) {
     for (let file = 0; file < 8; file++) {
@@ -92,6 +110,18 @@ function render() {
       button.type = "button";
       button.className = `square ${isDarkSquare(square) ? "dark" : "light"}`;
       button.dataset.square = String(square);
+
+      if (square === selected) {
+        button.classList.add("selected");
+      }
+
+      if (legalDestinations.has(square)) {
+        if (state.board[square]) {
+          addCornerMarkers(button);
+        } else {
+          button.classList.add("legal-empty");
+        }
+      }
 
       const piece = state.board[square];
       if (piece) {
@@ -103,5 +133,46 @@ function render() {
     }
   }
 }
+
+function handleSquareClick(square) {
+  const piece = state.board[square];
+  const isOwnPiece = piece !== null && colorOf(piece) === state.turn;
+
+  if (selected === null) {
+    if (isOwnPiece) selected = square;
+    render();
+    return;
+  }
+
+  if (square === selected) {
+    selected = null;
+    render();
+    return;
+  }
+
+  const movesToSquare = generateLegalMoves(state).filter(
+    (move) => move.from === selected && move.to === square,
+  );
+
+  if (movesToSquare.length > 0) {
+    // A promotion offers 4 piece choices to the same square; the picker
+    // that lets the player choose between them arrives in the next task.
+    // For now, default to a queen (the common case) so moves already work.
+    const move = movesToSquare.find((m) => m.promotion === "q") || movesToSquare[0];
+    state = applyMove(state, move);
+    selected = null;
+    render();
+    return;
+  }
+
+  selected = isOwnPiece ? square : null;
+  render();
+}
+
+boardEl.addEventListener("click", (event) => {
+  const button = event.target.closest(".square");
+  if (!button) return;
+  handleSquareClick(Number(button.dataset.square));
+});
 
 render();

@@ -5,7 +5,8 @@
   --ink: #2c3440;
   --amber-gold: #c98f2b;
   --check-tint: #c1503a;
-  --dot: rgba(44, 52, 64, 0.35);
+  --dot-on-light: rgba(44, 52, 64, 0.35);
+  --dot-on-dark: rgba(236, 231, 222, 0.45);
 }
 
 * {
@@ -128,8 +129,15 @@ button:hover {
   width: 22%;
   height: 22%;
   border-radius: 50%;
-  background: var(--dot);
   pointer-events: none;
+}
+
+.square.light.legal-empty::after {
+  background: var(--dot-on-light);
+}
+
+.square.dark.legal-empty::after {
+  background: var(--dot-on-dark);
 }
 
 .corner {
