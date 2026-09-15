@@ -1,4 +1,4 @@
-import { createInitialState, generateLegalMoves, applyMove, colorOf } from "./rules.js";
+import { createInitialState, generateLegalMoves, applyMove, colorOf, getStatus, WHITE } from "./rules.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -74,14 +74,64 @@ function pieceLabel(piece) {
 }
 
 const boardEl = document.getElementById("board");
+const statusTextEl = document.getElementById("status-text");
+const promotionModalEl = document.getElementById("promotion-modal");
+const promotionChoicesEl = promotionModalEl.querySelector(".choices");
 
 let state = createInitialState();
 let selected = null;
+let status = getStatus(state);
 
 function isDarkSquare(square) {
   const rank = Math.floor(square / 8);
   const file = square % 8;
   return (rank + file) % 2 === 0;
+}
+
+function findKingSquare(color) {
+  return state.board.indexOf(color === WHITE ? "K" : "k");
+}
+
+function updateStatusText() {
+  const toMove = state.turn === WHITE ? "White" : "Black";
+  if (status.isCheckmate) {
+    const winner = state.turn === WHITE ? "Black" : "White";
+    statusTextEl.textContent = `Checkmate — ${winner} wins`;
+  } else if (status.isStalemate) {
+    statusTextEl.textContent = "Stalemate — draw";
+  } else if (status.inCheck) {
+    statusTextEl.textContent = `Check — ${toMove} to move`;
+  } else {
+    statusTextEl.textContent = `${toMove} to move`;
+  }
+  statusTextEl.classList.toggle("check", status.inCheck);
+}
+
+function afterStateChange() {
+  status = getStatus(state);
+  selected = null;
+  updateStatusText();
+  render();
+}
+
+function openPromotionPicker(moves) {
+  return new Promise((resolve) => {
+    promotionChoicesEl.innerHTML = "";
+    for (const move of moves) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "choice";
+      const promotedPiece = state.turn === WHITE ? move.promotion.toUpperCase() : move.promotion;
+      button.appendChild(buildPieceIcon(promotedPiece));
+      button.setAttribute("aria-label", `Promote to ${PIECE_NAMES[move.promotion]}`);
+      button.addEventListener("click", () => {
+        promotionModalEl.classList.remove("open");
+        resolve(move);
+      });
+      promotionChoicesEl.appendChild(button);
+    }
+    promotionModalEl.classList.add("open");
+  });
 }
 
 function addCornerMarkers(button) {
@@ -101,6 +151,7 @@ function render() {
       }
     }
   }
+  const kingInCheckSquare = status.inCheck ? findKingSquare(state.turn) : null;
 
   boardEl.innerHTML = "";
   for (let rank = 7; rank >= 0; rank--) {
@@ -113,6 +164,10 @@ function render() {
 
       if (square === selected) {
         button.classList.add("selected");
+      }
+
+      if (square === kingInCheckSquare) {
+        button.classList.add("in-check");
       }
 
       if (legalDestinations.has(square)) {
@@ -135,6 +190,8 @@ function render() {
 }
 
 function handleSquareClick(square) {
+  if (status.isCheckmate || status.isStalemate) return;
+
   const piece = state.board[square];
   const isOwnPiece = piece !== null && colorOf(piece) === state.turn;
 
@@ -154,14 +211,19 @@ function handleSquareClick(square) {
     (move) => move.from === selected && move.to === square,
   );
 
-  if (movesToSquare.length > 0) {
-    // A promotion offers 4 piece choices to the same square; the picker
-    // that lets the player choose between them arrives in the next task.
-    // For now, default to a queen (the common case) so moves already work.
-    const move = movesToSquare.find((m) => m.promotion === "q") || movesToSquare[0];
-    state = applyMove(state, move);
-    selected = null;
-    render();
+  if (movesToSquare.length === 1) {
+    state = applyMove(state, movesToSquare[0]);
+    afterStateChange();
+    return;
+  }
+
+  if (movesToSquare.length > 1) {
+    // A pawn reaching the last rank offers 4 promotion choices to the
+    // same destination square; let the player pick which piece it becomes.
+    openPromotionPicker(movesToSquare).then((move) => {
+      state = applyMove(state, move);
+      afterStateChange();
+    });
     return;
   }
 
@@ -175,4 +237,5 @@ boardEl.addEventListener("click", (event) => {
   handleSquareClick(Number(button.dataset.square));
 });
 
+updateStatusText();
 render();
