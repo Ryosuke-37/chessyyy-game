@@ -1,12 +1,17 @@
 import { createInitialState, generateLegalMoves, applyMove, colorOf, getStatus, WHITE } from "./rules.js";
 import { findBestMove } from "./ai.js";
-import { buildPieceIcon, pieceLabel, isDarkSquare, addCornerMarkers, PIECE_NAMES } from "./render.js";
+import { buildPieceIcon, pieceLabel, isDarkSquare, addCornerMarkers, PIECE_NAMES, renderCapturedBar } from "./render.js";
 import { getActiveMode, setActiveMode } from "./active-mode.js";
 
 const boardEl = document.getElementById("board");
 const statusTextEl = document.getElementById("status-text");
 const promotionModalEl = document.getElementById("promotion-modal");
 const promotionChoicesEl = promotionModalEl.querySelector(".choices");
+const capturedBarEls = {
+  byWhiteEl: document.getElementById("captured-by-white"),
+  byBlackEl: document.getElementById("captured-by-black"),
+  leadEl: document.getElementById("material-lead"),
+};
 
 let state = createInitialState();
 let selected = null;
@@ -124,6 +129,8 @@ function render() {
       boardEl.appendChild(button);
     }
   }
+
+  renderCapturedBar(capturedBarEls, state.board);
 }
 
 function handleSquareClick(square) {

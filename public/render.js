@@ -87,3 +87,59 @@ export function addCornerMarkers(button) {
     button.appendChild(marker);
   }
 }
+
+const STARTING_COUNT = { p: 8, n: 2, b: 2, r: 2, q: 1 };
+const PIECE_VALUES = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
+// Captured pieces are derived from the current board alone (how many of
+// each type are missing from the standard starting count) rather than
+// tracked as move history, so this works identically in every mode,
+// including a freshly-reset game (nothing missing = nothing captured).
+const PROMOTABLE_TYPES = ["p", "n", "b", "r", "q"];
+
+export function getCapturedPieces(board) {
+  const onBoard = { w: { p: 0, n: 0, b: 0, r: 0, q: 0 }, b: { p: 0, n: 0, b: 0, r: 0, q: 0 } };
+  for (const piece of board) {
+    if (!piece) continue;
+    const type = piece.toLowerCase();
+    if (type === "k") continue;
+    const color = piece === piece.toUpperCase() ? "w" : "b";
+    onBoard[color][type]++;
+  }
+
+  const byWhite = []; // black pieces White has captured (rendered in black's style)
+  const byBlack = []; // white pieces Black has captured (rendered in white's style)
+  for (const type of PROMOTABLE_TYPES) {
+    for (let i = onBoard.b[type]; i < STARTING_COUNT[type]; i++) byWhite.push(type);
+    for (let i = onBoard.w[type]; i < STARTING_COUNT[type]; i++) byBlack.push(type.toUpperCase());
+  }
+  return { byWhite, byBlack };
+}
+
+export function materialDiff(board) {
+  let diff = 0;
+  for (const piece of board) {
+    if (!piece) continue;
+    const value = PIECE_VALUES[piece.toLowerCase()];
+    diff += piece === piece.toUpperCase() ? value : -value;
+  }
+  return diff;
+}
+
+function renderCapturedRow(container, pieceTypes) {
+  container.innerHTML = "";
+  for (const type of pieceTypes) {
+    container.appendChild(buildPieceIcon(type));
+  }
+}
+
+// Shared by every mode: given the board and the three elements a page
+// provides for this, renders both captured-piece trophy rows plus a
+// "+N" material-lead label next to whichever side is ahead.
+export function renderCapturedBar({ byWhiteEl, byBlackEl, leadEl }, board) {
+  const { byWhite, byBlack } = getCapturedPieces(board);
+  renderCapturedRow(byWhiteEl, byWhite);
+  renderCapturedRow(byBlackEl, byBlack);
+
+  const diff = materialDiff(board);
+  leadEl.textContent = diff === 0 ? "" : `${diff > 0 ? "White" : "Black"} +${Math.abs(diff)}`;
+}
