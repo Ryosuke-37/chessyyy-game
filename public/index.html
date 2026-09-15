@@ -4,9 +4,29 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Chessyyy</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <h1>Chessyyy</h1>
-    <p>Coming soon.</p>
+    <div id="status-bar">
+      <span id="status-text"></span>
+      <button id="new-game-button" type="button">New game</button>
+    </div>
+    <div id="board" role="grid" aria-label="Chess board"></div>
+
+    <div id="promotion-modal">
+      <div class="panel">
+        <p>Promote to:</p>
+        <div class="choices"></div>
+      </div>
+    </div>
+
+    <script type="module" src="/board.js"></script>
   </body>
 </html>
