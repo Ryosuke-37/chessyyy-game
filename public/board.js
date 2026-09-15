@@ -75,6 +75,7 @@ function pieceLabel(piece) {
 
 const boardEl = document.getElementById("board");
 const statusTextEl = document.getElementById("status-text");
+const newGameButtonEl = document.getElementById("new-game-button");
 const promotionModalEl = document.getElementById("promotion-modal");
 const promotionChoicesEl = promotionModalEl.querySelector(".choices");
 
@@ -235,6 +236,15 @@ boardEl.addEventListener("click", (event) => {
   const button = event.target.closest(".square");
   if (!button) return;
   handleSquareClick(Number(button.dataset.square));
+});
+
+newGameButtonEl.addEventListener("click", () => {
+  // Hiding the modal (rather than just resolving it) stops its buttons
+  // from being clickable, so a stale promotion choice from the previous
+  // game can never be applied to the fresh position.
+  promotionModalEl.classList.remove("open");
+  state = createInitialState();
+  afterStateChange();
 });
 
 updateStatusText();
